@@ -1,0 +1,11 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build MMU Simulator",
+            "type": "shell",
+            "command": "cmake -S '${workspaceFolder}' -B '${workspaceFolder}/build' && cmake --build '${workspaceFolder}/build'",
+            "problemMatcher": "$gcc"
+        }
+    ]
+}

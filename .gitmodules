@@ -1,0 +1,3 @@
+[submodule "sumavr"]
+	path = sumavr
+	url = https://github.com/buserror/simavr.git

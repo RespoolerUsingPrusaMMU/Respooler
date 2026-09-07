@@ -1,0 +1,31 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug Spooler Firmware",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/debug/firmware",
+            "MIMode": "gdb",
+            "miDebuggerPath": "/opt/homebrew/bin/avr-gdb",
+            "miDebuggerServerAddress": "localhost:1234",
+            "cwd": "${workspaceFolder}",
+            "stopAtEntry": true,
+            "externalConsole": false,
+            "preLaunchTask": "Start Spooler Simulator"
+        },
+        {
+            "name": "Debug Spooler Firmware (Debug Build)",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/debug/firmware",
+            "MIMode": "gdb",
+            "miDebuggerPath": "/opt/homebrew/bin/avr-gdb",
+            "miDebuggerServerAddress": "localhost:1234",
+            "cwd": "${workspaceFolder}",
+            "stopAtEntry": true,
+            "externalConsole": false,
+            "preLaunchTask": "build-debug"
+        }
+    ]
+}

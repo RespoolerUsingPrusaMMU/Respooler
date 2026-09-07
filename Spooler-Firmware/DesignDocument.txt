@@ -1,0 +1,164 @@
+                              +----------------+
+                              |      Boot      |
+                              +--------+-------+
+                                       |
+                                       | initialize hardware
+                                       | initialize drivers
+                                       v
+                              +----------------+
+                              |     Homing     |
+                              +---+--------+---+
+                                  |        |
+                stall detected    |        | timeout /
+                required samples  |        | driver failure
+                                  v        v
+                         +----------------+    +----------------+
+                         |  HomeBackoff   |    |     Error      |
+                         +--------+-------+    +----------------+
+                                  |
+                                  | backoff move complete
+                                  | establish position = 0
+                                  v
+                         +----------------+
+                         |     Ready      |
+                         +---+--------+---+
+                             |        |
+             Left / Right    |        | Middle / Start
+                             |        |
+                             v        v
+                  +--------------------+       +----------------+
+                  |  AdjustOuterLimit  |       |    Winding     |
+                  +---------+----------+       +----+-------+---+
+                            |                       |       |
+                            |                       |       |
+                            |                       |       | FINDA reports
+                            |                       |       | no filament
+                            |                       |       v
+                            |                       | +----------------+
+                            |                       | | OutOfFilament  |
+                            |                       | +-------+--------+
+                            |                       |         |
+                            |                       |         | filament restored /
+                            |                       |         | operator restart
+                            |                       |         v
+                            |                       |   +-----------+
+                            |                       +---|   Ready   |
+                            |                           +-----------+
+                            |
+                            |
+          +-----------------+----------------------+
+          |                 |                      |
+          |                 |                      |
+          | Left / Right    | 60 sec inactivity    | Middle / Start
+          |                 |                      |
+          | jog shuttle     | save outer limit     | save outer limit
+          | update limit    | return to position 0 | return to position 0
+          | reset timer     |                      |
+          |                 v                      v
+          |             +-------+             return home
+          |             | Ready |                  |
+          |             +-------+                  |
+          |                                        |
+          +----------------------------------------+
+                                                   |
+                                                   | home reached
+                                                   v
+                                              +---------+
+                                              | Winding |
+                                              +---------+
+
+
+A more detailed view of the AdjustOuterLimit state is:
+                 Ready
+                   |
+                   | Left or Right
+                   v
+        +---------------------------+
+        |     AdjustOuterLimit      |
+        |                           |
+        | MoveToSavedOuterLimit     |
+        +-------------+-------------+
+                      |
+                      | saved position reached
+                      v
+        +---------------------------+
+        |       JogOuterLimit       |
+        |                           |
+        | Left  -> move inward      |
+        | Right -> move outward     |
+        |                           |
+        | update mOuterLimitSteps   |
+        | reset inactivity timer    |
+        +------+--------------+-----+
+               |              |
+       60 sec  |              | Middle
+       timeout |              | Start
+               v              v
+        +---------------------------+
+        |        ReturnHome         |
+        |                           |
+        | move shuttle to position 0|
+        +------+--------------+-----+
+               |              |
+       timeout |              | Start requested
+               |              |
+               v              v
+            +-------+     +---------+
+            | Ready |     | Winding |
+            +-------+     +---------+
+
+And the principal winding motion is:
+                    Winding
+                       |
+                       v
+              Shuttle moving outward
+                       |
+                       | position >=
+                       | mOuterLimitSteps
+                       v
+               Reverse direction
+                       |
+                       v
+               Shuttle moving inward
+                       |
+                       | position <= 0
+                       v
+               Reverse direction
+                       |
+                       +--------------------+
+                       |                    |
+                       +---- repeats -------+
+
+The overall state transition summary is therefore:
+Boot
+  |
+  v
+Homing ---------> Error
+  |
+  v
+HomeBackoff ----> Error
+  |
+  v
+Ready
+  | \
+  |  \
+  |   +-- Middle --------------------------> Winding
+  |
+  +-- Left/Right --> AdjustOuterLimit
+                         |
+                         +-- inactivity --> Ready
+                         |
+                         +-- Middle -------> return home --> Winding
+
+Winding
+  |
+  +-- Middle ------------------------------> Ready
+  |
+  +-- filament lost -----------------------> OutOfFilament
+  |
+  +-- fault -------------------------------> Error
+
+OutOfFilament
+  |
+  +-- recovered / operator action ---------> Ready
+

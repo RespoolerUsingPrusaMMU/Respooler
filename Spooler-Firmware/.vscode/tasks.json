@@ -1,0 +1,51 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Configure Spooler Firmware",
+            "type": "shell",
+            "command": "cmake",
+            "args": [
+                "-S", "${workspaceFolder}",
+                "-B", "${workspaceFolder}/build/debug",
+                "-G", "Ninja",
+                "-DCMAKE_TOOLCHAIN_FILE=${workspaceFolder}/cmake/AvrGcc.cmake",
+                "-DCMAKE_BUILD_TYPE=Debug",
+                "-DSPOOLER_DEBUG=ON"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Build Spooler Firmware",
+            "type": "shell",
+            "command": "cmake",
+            "args": ["--build", "${workspaceFolder}/build/debug"],
+            "dependsOn": "Configure Spooler Firmware",
+            "dependsOrder": "sequence",
+            "problemMatcher": "$gcc"
+        },
+        {
+            "label": "Build MMU Simulator",
+            "type": "shell",
+            "command": "cmake",
+            "args": ["--build", "${workspaceFolder}/../Prusa-MMU-Simulator/build"],
+            "problemMatcher": "$gcc"
+        },
+        {
+            "label": "Start Spooler Simulator",
+            "type": "shell",
+            "dependsOrder": "sequence",
+            "dependsOn": ["Build Spooler Firmware", "Build MMU Simulator"],
+            "command": "pkill -x prusa_mmu_sim 2>/dev/null || true; nohup '${workspaceFolder}/../Prusa-MMU-Simulator/build/prusa_mmu_sim' '${workspaceFolder}/build/debug/firmware' > /tmp/prusa-spooler-sim.log 2>&1 & sleep 2",
+            "problemMatcher": []
+        },
+        {
+            "label": "build-debug",
+            "type": "shell",
+            "command": "cmake --build build/debug",
+            "dependsOn": "Configure Spooler Firmware",
+            "dependsOrder": "sequence",
+            "problemMatcher": "$gcc"
+        }
+    ]
+}

@@ -385,12 +385,6 @@ void Rewinder::updateOuterLimitJogging()
   }
   else if(mCenterButtonAction == CenterButtonAction::ShortPress)
   {
-    //--------------------------------------------------------------------
-    // Save the selected outer limit and return the shuttle to logical
-    // position zero.  The rewinder will enter Ready after the return
-    // completes.  Starting the winding operation requires a separate
-    // center-button press from Ready.
-    //--------------------------------------------------------------------
     beginOuterLimitReturn(false);
     tActivity = true;
   }
@@ -794,17 +788,14 @@ void Rewinder::updateWinding()
 //--------------------------------------------------------------------
 /**
  * @brief Update the out-of-filament state.
- *
- * @details Winding remains stopped while filament is absent.  Once filament
- * has been restored, a short press of the center button immediately
- * resumes winding from the current shuttle position and in the
- * previously selected shuttle direction.
  */
 //--------------------------------------------------------------------
 void Rewinder::updateOutOfFilament()
 {
   stopWinding();
 
+  // After filament is restored, a short center-button press resumes winding
+  // immediately from the retained shuttle position and traverse direction.
   if(mBoard.finda().filamentPresent() &&
      (mCenterButtonAction == CenterButtonAction::ShortPress))
   {

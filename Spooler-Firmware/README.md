@@ -19,16 +19,17 @@ FINDA is interpreted for the rewinder mechanism: the steel ball being close to F
 Expected layout:
 
 ```text
-/RespoolerUsingPrusaMMU/
-├── Spooler-Firmware/
-├── Prusa-MMU-Simulator/
-└── simavr/
+/Users/andrepruitt/PrusaMMUFirmware/
+├── Prusa-Spooler-Firmware/
+└── Prusa-MMU-Simulator/
+
+/Users/andrepruitt/simavr/
 ```
 
 The spooler source itself uses the following layout:
 
 ```text
-Spooler-Firmware/
+Prusa-Spooler-Firmware/
 ├── inc/
 │   ├── app/
 │   ├── config/
@@ -140,22 +141,13 @@ Use the toolchain file finds `avr-gcc` on `PATH`.
 Example using the Prusa bundled compiler:
 
 ```bash
-cd ${PWD}/RespoolerUsingPrusaMMU/Prusa-Spooler-Firmware
+cd /Users/andrepruitt/PrusaMMUFirmware/Prusa-Spooler-Firmware
 
 cmake -S . -B build/release -G Ninja \
   -DCMAKE_TOOLCHAIN_FILE=cmake/AvrGcc.cmake \
   -DCMAKE_BUILD_TYPE=Release
 
 cmake --build build/release
-```
-
-Or for a debug version:
-```bash
-cmake -S . -B build/debug -G Ninja \
-  -DCMAKE_TOOLCHAIN_FILE=cmake/AvrGcc.cmake \
-  -DCMAKE_BUILD_TYPE=Debug
-
-cmake --build build/debug
 ```
 
 Outputs:

@@ -3,6 +3,7 @@
 #include "ShiftRegister.hh"
 #include "StepperMotor.hh"
 #include "Tmc2130.hh"
+#include "SimulatorStatus.hh"
 
 #include <array>
 #include <cstdint>
@@ -22,7 +23,9 @@ public:
     ~MmuBoard();
 
     bool loadFirmware(const std::string &path);
-    bool initialize(std::uint32_t frequencyHz = 16000000U, int gdbPort = 1234);
+    bool initialize(std::uint32_t frequencyHz = 16000000U,
+                    int gdbPort = 1234,
+                    bool waitForGdb = false);
     int run();
 
     void shiftRegisterLatched(std::uint16_t value);
@@ -45,6 +48,7 @@ public:
     void disableAutomaticRunout();
 
     std::uint32_t driverRegister(Axis axis, std::uint8_t address) const;
+    SimulatorStatus statusSnapshot() const;
     void printStatus() const;
 
     avr_t *avr() const { return avr_; }

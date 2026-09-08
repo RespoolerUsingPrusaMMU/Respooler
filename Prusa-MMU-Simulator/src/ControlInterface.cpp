@@ -123,6 +123,13 @@ void ControlInterface::poll(MmuBoard &board) {
     updateButtonTap(board);
 }
 
+
+void ControlInterface::executeCommand(MmuBoard &board, const std::string &line) {
+    if (!line.empty())
+        std::cout << "[control] " << line << "\n";
+    executeLine(board, line);
+}
+
 void ControlInterface::startButtonTap(MmuBoard &board,
                                       const std::string &requestedButtonName,
                                       std::uint32_t holdMilliseconds) {

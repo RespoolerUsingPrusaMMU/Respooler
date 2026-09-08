@@ -1,0 +1,17 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Spooler Firmware in Qt Simulator",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/../Spooler-Firmware/build/debug/firmware",
+      "cwd": "${workspaceFolder}/../Spooler-Firmware",
+      "MIMode": "gdb",
+      "miDebuggerPath": "/opt/local/bin/avr-gdb",
+      "miDebuggerServerAddress": "localhost:1234",
+      "stopAtEntry": false,
+      "preLaunchTask": "Simulator: Start Qt with Debug Firmware"
+    }
+  ]
+}

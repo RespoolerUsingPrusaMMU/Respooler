@@ -1,453 +1,249 @@
-# Prusa MMU / Spooler Simulator
+# Prusa MMU / Spooler Simulator with Qt GUI
 
-A board-level simulator for the standalone filament spooler firmware using
-`libsimavr`. It runs the firmware ELF on an emulated ATmega32U4 while modeling
-the external MMU-board hardware that the spooler firmware depends on.
+This simulator runs the ATmega32U4 spooler firmware inside `simavr` and models
+the MMU hardware used by the filament rewinder. This revision adds an optional
+Qt 6 graphical front end while retaining the original command-line simulator,
+FIFO command interface, and GDB server.
 
-The simulator is intended for VS Code/GDB debugging and state-machine testing.
-It is a functional hardware model, not an electrical or mechanical finite-
-element simulation.
-
-## What is modeled
-
-### ATmega32U4 and board I/O
-
-- ATmega32U4 at 16 MHz by default.
-- FINDA on PF6.
-- Three-button resistor ladder on ADC5.
-- Pulley/shuttle STEP PB4, CS PC6, StallGuard PF4.
-- Selector/take-up STEP PD4, CS PD7, StallGuard PF1.
-- Idler/brake STEP PD6, CS PB7, StallGuard PF0.
-- Shared TMC2130 SPI bus.
-- Cascaded 74HC595 shift registers on PB5, PC7, and PB6.
-- All motor DIR/ENABLE shift-register outputs.
-- All five red/green LED pairs.
-
-### TMC2130 behavior
-
-The TMC2130 model now matches the standalone spooler driver's initialization
-requirements rather than only the original Prusa firmware behavior.
-
-It models:
-
-- five-byte pipelined SPI reads,
-- register writes and stored register values,
-- `IOIN` version `0x11` in bits 31:24,
-- the required IOIN variant bit 6,
-- live STEP, DIR, and enable observations,
-- `GSTAT`,
-- `DRV_STATUS`,
-- `IHOLD_IRUN`, `CHOPCONF`, `COOLCONF`, `GCONF`, `TCOOLTHRS`, `TPWMTHRS`,
-  `TPOWERDOWN`, and `PWMCONF` writes,
-- missing-driver injection,
-- invalid-identity injection,
-- simulated short/driver error,
-- undervoltage,
-- over-temperature prewarning,
-- over-temperature.
-
-A normal driver therefore returns an `IOIN` value containing at least:
+## Expected directory layout
 
 ```text
-0x11000040
+PrusaMMUFirmware/
+├── simavr/
+├── Prusa-MMU-Simulator/
+└── Spooler-Firmware/
 ```
 
-plus live low-order STEP/DIR/enable bits. This is sufficient for the current
-`Tmc2130::init()` identity check to succeed.
+`simavr` and `Prusa-MMU-Simulator` are host applications/libraries. The
+`Spooler-Firmware` directory contains the AVR firmware that runs inside the
+simulated ATmega32U4.
 
-### Shuttle mechanics and homing
+## What the GUI shows
 
-Automatic mechanics are enabled by default.
+The Qt front end provides:
 
-- Shuttle physical position starts at 1000 simulator steps.
-- Inner hard stop defaults to 0 steps.
-- Outer hard travel limit defaults to 5200 steps.
-- Homing motion toward the inner stop automatically asserts active-low
-  StallGuard when the shuttle reaches the hard stop.
-- Reversing away from the hard stop automatically releases StallGuard.
-- Physical position is clamped at the configured hard limits.
-- Manual stall injection remains available for timeout and fault testing.
+- five live MMU-style front-panel LEDs;
+- Left, Center/Start, and Right push buttons;
+- FINDA filament-present/absent controls;
+- an animated shuttle moving along its mechanical travel;
+- animated shuttle, take-up, and brake motor rotors driven from observed STEP
+  counts;
+- motor enabled/disabled state;
+- visible motor/fault indication;
+- mechanical automatic/manual controls;
+- shuttle StallGuard injection;
+- TMC2130 missing-driver and invalid-identity injection;
+- TMC2130 over-temperature and under-voltage injection;
+- the original FIFO command interface for scripts and regression tests;
+- the simavr GDB server on port 1234 by default.
 
-The automatic hard-stop behavior lets the current spooler firmware execute its
-normal Homing -> HomeBackoff -> Ready sequence without manually issuing a stall
-command.
+The GUI does not directly manipulate the simulated AVR from the Qt main thread.
+A simulation worker owns `MmuBoard`, `ControlInterface`, and all calls to
+`avr_run()`. The GUI communicates with that worker through queued Qt
+signals/slots and receives read-only `SimulatorStatus` snapshots. This keeps
+Qt responsive and prevents the GUI from racing simavr.
 
-### Motor motion
+## Install dependencies on macOS
 
-The TMC2130 is configured by the spooler for `CHOPCONF.DEDGE`, so every STEP pin
-transition represents one microstep. The simulator therefore counts both rising
-and falling STEP transitions when a motor is enabled and not stalled.
-
-The simulator tracks:
-
-- physical motor position,
-- total step count,
-- enable state,
-- logical motion direction,
-- StallGuard state.
-
-The three original MMU axes are labeled by their spooler roles:
-
-```text
-Pulley   = shuttle / traverse
-Selector = take-up spool
-Idler    = source-spool brake
-```
-
-### FINDA and filament runout
-
-The current spooler uses:
-
-```text
-FINDA_HIGH_MEANS_NO_FILAMENT = true
-```
-
-Therefore:
-
-```text
-PF6 LOW  = filament present
-PF6 HIGH = no filament
-```
-
-The preferred simulator command is `filament present|absent`; the lower-level
-`finda on|off` command remains available to control the raw PF6 level.
-
-An automatic runout can also be scheduled after a specified number of future
-take-up motor steps. This is useful for testing transition from `Winding` to
-`OutOfFilament` without manually timing a command.
-
-### Buttons
-
-The ADC values match the current standalone spooler `Defaults.hh`:
-
-```text
-Right  = ADC count 25   (accepted range 0..50)
-Middle = ADC count 90   (accepted range 80..100)
-Left   = ADC count 170  (accepted range 160..180)
-None   = ADC count 1023
-```
-
-This corrects the Left/Right mapping in the earlier simulator.
-
-## Easier button simulation
-
-For normal button testing, use a one-shot `tap` command. The simulator now generates a complete debounced release/press/release sequence using simulated AVR CPU cycles rather than host wall-clock time. By default it forces the button released for 50 ms, presses the selected ADC-ladder button for 100 ms, then holds the released state for another 50 ms. This guarantees the firmware can clear a previous `justPressed()` event before recognizing the next press, even when simavr runs faster or slower than real time under GDB.
+The project assumes MacPorts is installed. Install Qt 6 with:
 
 ```bash
-echo 'tap left'   > /tmp/prusa-mmu-sim.cmd
-echo 'tap middle' > /tmp/prusa-mmu-sim.cmd
-echo 'tap right'  > /tmp/prusa-mmu-sim.cmd
+sudo port selfupdate
+sudo port install qt6-qtbase
 ```
 
-An optional press duration can be supplied in milliseconds. The 50 ms pre-release and post-release debounce phases remain in place:
+The simulator still requires a previously built copy of `simavr` in the sibling
+`simavr` directory.
+
+## Build simavr
+
+From the top-level directory:
 
 ```bash
-echo 'tap middle 250' > /tmp/prusa-mmu-sim.cmd
+cd simavr
+make
+cd ..
 ```
 
-`press` is an alias for `tap`. For tests that require a button to remain pressed, use `hold` followed later by `release`:
-
-```bash
-echo 'hold right' > /tmp/prusa-mmu-sim.cmd
-echo 'release'    > /tmp/prusa-mmu-sim.cmd
-```
-
-The original `button left|middle|right|release` command remains available for compatibility and still behaves as a manual press/release interface.
-
-## Build
-
-The simulator requires a built simavr source tree.
-
-```sh
-cmake -S . -B build \
-  -DSIMAVR_ROOT=/Users/andrepruitt/PrusaMMUFirmware/simavr
-cmake --build build
-```
-
-## Run
-
-Run it against the standalone spooler ELF:
-
-```sh
-./build/prusa_mmu_sim \
-  /Users/andrepruitt/PrusaMMUFirmware/Prusa-Spooler-Firmware/build/release/firmware
-```
-
-Default endpoints:
+The simulator CMake file searches for `libsimavr` below:
 
 ```text
-GDB:     localhost:1234
-Control: /tmp/prusa-mmu-sim.cmd
+simavr/simavr/obj-*/
 ```
 
-## Control commands
+## Build the Qt simulator
 
-Send commands from another terminal:
+```bash
+cd Prusa-MMU-Simulator
 
-```sh
+rm -rf build/debug
+
+cmake -S . -B build/debug -G Ninja \
+  -DCMAKE_BUILD_TYPE=Debug \
+  -DCMAKE_PREFIX_PATH=/opt/local/libexec/qt6
+
+cmake --build build/debug
+```
+
+When Qt 6 is found, two executables are built:
+
+```text
+build/debug/prusa_mmu_sim
+build/debug/prusa_mmu_sim_gui
+```
+
+`prusa_mmu_sim` is the original command-line simulator.
+
+`prusa_mmu_sim_gui` is the new Qt front end.
+
+If Qt is not found, CMake still builds `prusa_mmu_sim` and reports that the GUI
+was disabled.
+
+## Build the spooler firmware for debugging
+
+The simulator should normally be used with the firmware Debug ELF:
+
+```bash
+cd ../Spooler-Firmware
+
+rm -rf build/debug
+
+cmake -S . -B build/debug -G Ninja \
+  -DCMAKE_TOOLCHAIN_FILE=cmake/AvrGcc.cmake \
+  -DCMAKE_BUILD_TYPE=Debug
+
+cmake --build build/debug
+```
+
+The firmware used by simavr is:
+
+```text
+Spooler-Firmware/build/debug/firmware
+```
+
+The Debug configuration is expected to define `SPOOLER_DEBUG`, so the firmware
+contains its diagnostic output code.
+
+## Run the GUI manually
+
+From `Prusa-MMU-Simulator`:
+
+```bash
+./build/debug/prusa_mmu_sim_gui \
+  ../Spooler-Firmware/build/debug/firmware
+```
+
+The default GDB endpoint is:
+
+```text
+localhost:1234
+```
+
+The default FIFO remains:
+
+```text
+/tmp/prusa-mmu-sim.cmd
+```
+
+Therefore terminal commands continue to work while the GUI is open:
+
+```bash
 echo 'status' > /tmp/prusa-mmu-sim.cmd
-```
-
-### Filament / FINDA
-
-```sh
 echo 'filament present' > /tmp/prusa-mmu-sim.cmd
-echo 'filament absent'  > /tmp/prusa-mmu-sim.cmd
-
-echo 'finda on'  > /tmp/prusa-mmu-sim.cmd   # raw PF6 HIGH
-echo 'finda off' > /tmp/prusa-mmu-sim.cmd   # raw PF6 LOW
-```
-
-### Buttons
-
-Hold a button:
-
-```sh
-echo 'tap left'   > /tmp/prusa-mmu-sim.cmd
-echo 'tap middle' > /tmp/prusa-mmu-sim.cmd
-echo 'tap right'  > /tmp/prusa-mmu-sim.cmd
-```
-
-Release it:
-
-```sh
-# One-shot tap commands release automatically.
-# For a deliberate sustained press:
-echo 'hold middle' > /tmp/prusa-mmu-sim.cmd
-echo 'release'     > /tmp/prusa-mmu-sim.cmd
-```
-
-The firmware's own debounce timing remains active, so leave a simulated button
-pressed long enough for the firmware to recognize it before releasing it.
-
-### Mechanical model
-
-```sh
-echo 'mechanics auto'   > /tmp/prusa-mmu-sim.cmd
-echo 'mechanics manual' > /tmp/prusa-mmu-sim.cmd
-
-echo 'shuttle-position 1000' > /tmp/prusa-mmu-sim.cmd
-echo 'shuttle-limits 0 5200' > /tmp/prusa-mmu-sim.cmd
-```
-
-Manual StallGuard injection:
-
-```sh
-echo 'stall shuttle'   > /tmp/prusa-mmu-sim.cmd
+echo 'filament absent' > /tmp/prusa-mmu-sim.cmd
+echo 'tap middle 500' > /tmp/prusa-mmu-sim.cmd
+echo 'tap middle 5500' > /tmp/prusa-mmu-sim.cmd
+echo 'stall shuttle' > /tmp/prusa-mmu-sim.cmd
 echo 'unstall shuttle' > /tmp/prusa-mmu-sim.cmd
 ```
 
-`pulley`, `selector`, and `idler` are accepted as aliases for `shuttle`,
-`takeup`, and `brake` respectively.
+## VS Code firmware debugging
 
-### Automatic runout
-
-Trigger no-filament after another 10,000 take-up microsteps:
-
-```sh
-echo 'runout after 10000' > /tmp/prusa-mmu-sim.cmd
-```
-
-Disable it:
-
-```sh
-echo 'runout off' > /tmp/prusa-mmu-sim.cmd
-```
-
-### TMC2130 fault injection
-
-Missing driver:
-
-```sh
-echo 'tmc-present shuttle off' > /tmp/prusa-mmu-sim.cmd
-```
-
-Bad IOIN identity/version:
-
-```sh
-echo 'tmc-id shuttle bad' > /tmp/prusa-mmu-sim.cmd
-```
-
-Restore normal identity:
-
-```sh
-echo 'tmc-id shuttle good' > /tmp/prusa-mmu-sim.cmd
-```
-
-Runtime fault/status injection:
-
-```sh
-echo 'driver-error takeup'            > /tmp/prusa-mmu-sim.cmd
-echo 'driver-ok takeup'               > /tmp/prusa-mmu-sim.cmd
-echo 'tmc-undervoltage brake on'      > /tmp/prusa-mmu-sim.cmd
-echo 'tmc-prewarn shuttle on'         > /tmp/prusa-mmu-sim.cmd
-echo 'tmc-overtemp shuttle on'        > /tmp/prusa-mmu-sim.cmd
-```
-
-Inspect a TMC register:
-
-```sh
-echo 'tmc-reg shuttle 0x04' > /tmp/prusa-mmu-sim.cmd   # IOIN
-echo 'tmc-reg shuttle 0x6c' > /tmp/prusa-mmu-sim.cmd   # CHOPCONF
-echo 'tmc-reg shuttle 0x10' > /tmp/prusa-mmu-sim.cmd   # IHOLD_IRUN
-```
-
-### Help
-
-```sh
-echo 'help' > /tmp/prusa-mmu-sim.cmd
-```
-
-## Suggested spooler test sequence
-
-### 1. Driver initialization and automatic homing
-
-Start the simulator with all defaults. Continue the firmware in GDB.
-
-Expected behavior:
+Example VS Code files are supplied as:
 
 ```text
-Boot
-  -> all three TMC IOIN checks succeed
-  -> Homing
-  -> shuttle physically moves from 1000 toward 0
-  -> automatic StallGuard asserts at 0
-  -> HomeBackoff
-  -> shuttle moves outward by configured backoff
-  -> firmware logical shuttle position becomes 0
-  -> Ready
+.vscode/tasks.example.json
+.vscode/launch.example.json
 ```
 
-Use:
+Copy or merge them into:
 
-```sh
-echo 'status' > /tmp/prusa-mmu-sim.cmd
+```text
+.vscode/tasks.json
+.vscode/launch.json
 ```
 
-to inspect motor enable/direction/positions, StallGuard, TMC identity, FINDA,
-and LEDs.
+The supplied workflow performs these operations in order:
 
-### 2. Driver initialization failure
+1. Configure `Spooler-Firmware/build/debug` with the AVR toolchain.
+2. Build the Debug firmware ELF.
+3. Configure the simulator Debug build with Qt.
+4. Build `prusa_mmu_sim_gui`.
+5. Start the Qt simulator with the Debug firmware ELF.
+6. Wait until simavr reports that the GDB server is ready.
+7. Start `/opt/local/bin/avr-gdb` through the VS Code C/C++ debugger.
+8. Attach GDB to `localhost:1234`.
 
-While the CPU is stopped before `Board::init()` executes:
+Select the launch configuration:
 
-```sh
-echo 'tmc-id shuttle bad' > /tmp/prusa-mmu-sim.cmd
+```text
+Spooler Firmware in Qt Simulator
 ```
 
-or:
+The GUI remains responsive while the firmware is stopped at a GDB breakpoint.
+The FIFO is also still polled while the AVR is stopped. Commands that only
+change simulated inputs can therefore be issued while debugging. Time-based
+button taps still require simulated AVR cycles to advance before their timed
+press/release phases complete.
 
-```sh
-echo 'tmc-present shuttle off' > /tmp/prusa-mmu-sim.cmd
+## Architecture
+
+```text
+                         Qt main thread
+                              |
+                       queued signals
+                              |
+                              v
+                    SimulationWorker thread
+                              |
+                 +------------+-------------+
+                 |                          |
+                 v                          v
+        SimulatorController          ControlInterface
+                 |                    FIFO commands
+                 +------------+-------------+
+                              |
+                              v
+                           MmuBoard
+                              |
+              +---------------+---------------+
+              |               |               |
+              v               v               v
+           simavr          TMC2130        mechanics
+              |
+              v
+        ATmega32U4 firmware
 ```
 
-Then continue execution. `Board::init()` should return false and the rewinder
-should enter its driver-initialization error path.
+The GUI and FIFO deliberately share the same simulated board. This makes it
+possible to operate the simulator interactively and still use shell scripts for
+repeatable tests.
 
-### 3. Homing timeout
+## Important source files
 
-Disable automatic mechanics before homing:
-
-```sh
-echo 'mechanics manual' > /tmp/prusa-mmu-sim.cmd
-echo 'unstall shuttle'  > /tmp/prusa-mmu-sim.cmd
+```text
+src/SimulatorStatus.hh
+src/SimulatorController.hh
+src/SimulatorController.cpp
+src/gui/SimulationWorker.hh
+src/gui/SimulationWorker.cpp
+src/gui/MainWindow.hh
+src/gui/MainWindow.cpp
+src/gui/MachineWidget.hh
+src/gui/MachineWidget.cpp
+src/gui/main_gui.cpp
 ```
 
-The shuttle will never report its home stall, allowing the 15-second firmware
-homing timeout to be tested.
-
-### 4. Outer-limit adjustment
-
-Once Ready, press and release either arrow. The shuttle should first move to its
-saved outer limit. Subsequent Left/Right presses should jog the selected outer
-limit. Middle should return the shuttle to logical home and start winding when
-filament is present.
-
-### 5. Winding
-
-With filament present:
-
-```sh
-echo 'tap middle'  > /tmp/prusa-mmu-sim.cmd
-# allow debounce
-# One-shot tap commands release automatically.
-# For a deliberate sustained press:
-echo 'hold middle' > /tmp/prusa-mmu-sim.cmd
-echo 'release'     > /tmp/prusa-mmu-sim.cmd
-```
-
-Expected behavior:
-
-- take-up enabled and stepping,
-- shuttle traversing between logical inner/outer limits,
-- brake enabled but stationary,
-- Left reduces speed level,
-- Right increases speed level,
-- Middle stops winding and returns to Ready behavior defined by firmware.
-
-### 6. Filament runout
-
-During winding:
-
-```sh
-echo 'runout after 5000' > /tmp/prusa-mmu-sim.cmd
-```
-
-After the requested take-up motion, PF6 is driven high. After the firmware FINDA
-debounce interval, the spooler should stop take-up and shuttle motion, release
-the brake, and enter `OutOfFilament`.
-
-Restore filament and acknowledge:
-
-```sh
-echo 'filament present' > /tmp/prusa-mmu-sim.cmd
-echo 'tap middle'    > /tmp/prusa-mmu-sim.cmd
-# allow debounce
-echo 'release'         > /tmp/prusa-mmu-sim.cmd
-```
-
-## GDB / VS Code
-
-Keep the firmware debugger pointed at the standalone spooler ELF:
-
-```json
-"program": "${workspaceFolder}/build/release/firmware",
-"MIMode": "gdb",
-"miDebuggerPath": "/opt/homebrew/bin/avr-gdb",
-"miDebuggerServerAddress": "localhost:1234"
-```
-
-A simulator pre-launch task can run the sibling simulator:
-
-```json
-{
-  "label": "Start MMU Simulator",
-  "type": "shell",
-  "command": "pkill -x prusa_mmu_sim 2>/dev/null || true; nohup '${workspaceFolder}/../Prusa-MMU-Simulator/build/prusa_mmu_sim' '${workspaceFolder}/build/release/firmware' > /tmp/prusa-mmu-sim.log 2>&1 & sleep 2",
-  "problemMatcher": []
-}
-```
-
-## Scope and limitations
-
-The simulator is designed to test the behavior used by the current spooler
-firmware. It does not attempt to reproduce TMC2130 analog current regulation,
-real motor inertia, filament elasticity, thermal rise, spool-radius-dependent
-brake torque, or missed steps caused by marginal torque.
-
-AVR EEPROM operations are handled by simavr during a simulator process. This
-revision does not add a separate host-side EEPROM persistence file across
-simulator process restarts. Therefore EEPROM save/load logic can be debugged in
-one simulated run, but a true simulator-process power-cycle persistence test
-still requires an EEPROM persistence extension.
-
-## v4 command diagnostics
-
-Simulator stdout/stderr are now explicitly unbuffered for both C stdio and C++
-iostreams. Each received FIFO command is echoed as `[control] <command>` before
-execution, making it easy to distinguish a FIFO/control-loop problem from a
-firmware response problem.
-
-When GDB has stopped the AVR at a breakpoint, the FIFO command is not processed
-until execution is continued because `control.poll()` runs after `avr_run()`
-returns.
+`MachineWidget` performs the custom MMU-style drawing and animation.
+`SimulationWorker` owns simavr execution and bridges it to the Qt event-driven
+interface.

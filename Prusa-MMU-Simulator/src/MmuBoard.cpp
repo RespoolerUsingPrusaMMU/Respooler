@@ -59,7 +59,7 @@ bool MmuBoard::loadFirmware(const std::string &path) {
     return true;
 }
 
-bool MmuBoard::initialize(std::uint32_t frequencyHz, int gdbPort) {
+bool MmuBoard::initialize(std::uint32_t frequencyHz, int gdbPort, bool waitForGdb) {
     if (!firmwareLoaded_) {
         std::cerr << "Firmware must be loaded before board initialization.\n";
         return false;
@@ -105,8 +105,12 @@ bool MmuBoard::initialize(std::uint32_t frequencyHz, int gdbPort) {
     applyEffectiveStall(Axis::Idler);
 
     avr_->gdb_port = gdbPort;
-    avr_->state = cpu_Stopped;
     avr_gdb_init(avr_);
+
+    // Normal simulator use should begin executing firmware immediately.
+    // VS Code debugging can request a stopped CPU so avr-gdb can attach
+    // before the first firmware instruction executes.
+    avr_->state = waitForGdb ? cpu_Stopped : cpu_Running;
 
     initialized_ = true;
     return true;
@@ -204,6 +208,9 @@ void MmuBoard::adcTrigger(struct avr_irq_t *, std::uint32_t value, void *param) 
 
 void MmuBoard::handleAdcTrigger(std::uint32_t value) {
     (void)value;
+    if (avr_ == nullptr)
+        return;
+
     avr_irq_t *adc5 = avr_io_getirq(avr_, AVR_IOCTL_ADC_GETIRQ, ADC_IRQ_ADC5);
     if (adc5)
         avr_raise_irq(adc5, adcCountsToMillivolts(adcCountsForButton(button_)));
@@ -254,6 +261,12 @@ void MmuBoard::setFilamentPresent(bool present) {
 
 void MmuBoard::setButton(Button button) {
     button_ = button;
+
+    // GUI commands can arrive after a failed initialization or after the
+    // simulated CPU has stopped.  Never call into simavr without a valid AVR.
+    if (avr_ == nullptr)
+        return;
+
     avr_irq_t *adc5 = avr_io_getirq(avr_, AVR_IOCTL_ADC_GETIRQ, ADC_IRQ_ADC5);
     if (adc5)
         avr_raise_irq(adc5, adcCountsToMillivolts(adcCountsForButton(button_)));
@@ -414,6 +427,41 @@ std::uint16_t MmuBoard::adcCountsForButton(Button button) {
 
 std::uint32_t MmuBoard::adcCountsToMillivolts(std::uint16_t counts) {
     return static_cast<std::uint32_t>((static_cast<std::uint64_t>(counts) * 5000ULL) / 1023ULL);
+}
+
+SimulatorStatus MmuBoard::statusSnapshot() const {
+    SimulatorStatus status{};
+    status.initialized = initialized_;
+    status.filamentPresent = !finda_;
+    status.automaticMechanics = automaticMechanics_;
+    status.shuttleMinimum = shuttleMinimum_;
+    status.shuttleMaximum = shuttleMaximum_;
+    status.cycle = avr_ ? avr_->cycle : 0ULL;
+
+    const Axis axes[] = {Axis::Pulley, Axis::Selector, Axis::Idler};
+    for (std::size_t index = 0; index < 3; ++index) {
+        const StepperMotor &sourceMotor = motor(axes[index]);
+        const Tmc2130 &sourceDriver = driver(axes[index]);
+        MotorStatus &target = status.motors[index];
+        target.name = sourceMotor.name();
+        target.enabled = sourceMotor.enabled();
+        target.direction = sourceMotor.direction();
+        target.stalled = sourceMotor.stalled();
+        target.position = sourceMotor.position();
+        target.stepCount = sourceMotor.stepCount();
+        target.driverPresent = sourceDriver.present();
+        target.driverIdentityValid = sourceDriver.validIdentity();
+        target.underVoltage = sourceDriver.underVoltage();
+        target.overTemperature = sourceDriver.overTemperature();
+        target.overTemperaturePrewarn = sourceDriver.overTemperaturePrewarn();
+    }
+
+    for (std::size_t index = 0; index < 5; ++index) {
+        status.redLeds[index] = (shiftValue_ & LED_RED[index]) != 0;
+        status.greenLeds[index] = (shiftValue_ & LED_GREEN[index]) != 0;
+    }
+
+    return status;
 }
 
 void MmuBoard::printStatus() const {

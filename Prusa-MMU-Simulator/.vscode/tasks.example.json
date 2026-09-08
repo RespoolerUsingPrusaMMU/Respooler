@@ -1,11 +1,90 @@
 {
-    "version": "2.0.0",
-    "tasks": [
-        {
-            "label": "Build MMU Simulator",
-            "type": "shell",
-            "command": "cmake -S '${workspaceFolder}' -B '${workspaceFolder}/build' && cmake --build '${workspaceFolder}/build'",
-            "problemMatcher": "$gcc"
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Firmware: Configure Debug",
+      "type": "shell",
+      "command": "cmake",
+      "args": [
+        "-S", ".",
+        "-B", "build/debug",
+        "-G", "Ninja",
+        "-DCMAKE_TOOLCHAIN_FILE=cmake/AvrGcc.cmake",
+        "-DCMAKE_BUILD_TYPE=Debug"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/../Spooler-Firmware"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Firmware: Build Debug",
+      "type": "shell",
+      "command": "cmake",
+      "args": ["--build", "build/debug"],
+      "options": {
+        "cwd": "${workspaceFolder}/../Spooler-Firmware"
+      },
+      "dependsOn": "Firmware: Configure Debug",
+      "problemMatcher": "$gcc"
+    },
+    {
+      "label": "Simulator: Configure Qt Debug",
+      "type": "shell",
+      "command": "cmake",
+      "args": [
+        "-S", ".",
+        "-B", "build/debug",
+        "-G", "Ninja",
+        "-DCMAKE_BUILD_TYPE=Debug",
+        "-DCMAKE_PREFIX_PATH=/opt/local/libexec/qt6"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Simulator: Build Qt Debug",
+      "type": "shell",
+      "command": "cmake",
+      "args": ["--build", "build/debug", "--target", "prusa_mmu_sim_gui"],
+      "dependsOn": "Simulator: Configure Qt Debug",
+      "problemMatcher": "$gcc"
+    },
+    {
+      "label": "Debug: Build Firmware and Simulator",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "Firmware: Build Debug",
+        "Simulator: Build Qt Debug"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Simulator: Start Qt with Debug Firmware",
+      "type": "shell",
+      "command": "${workspaceFolder}/build/debug/prusa_mmu_sim_gui",
+      "args": [
+        "--gdb-port", "1234",
+        "--wait-for-gdb",
+        "${workspaceFolder}/../Spooler-Firmware/build/debug/firmware"
+      ],
+      "dependsOn": "Debug: Build Firmware and Simulator",
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "simulator",
+        "pattern": {
+          "regexp": "^(.*)$",
+          "message": 1
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "Prusa MMU / Spooler Qt simulator",
+          "endsPattern": "Simulator ready\\. GDB localhost:1234"
         }
-    ]
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    }
+  ]
 }

@@ -159,6 +159,16 @@ build/release/firmware.asm
 build/release/firmware.map
 ```
 
+Use this to compile it in debug mode:
+
+```text
+cmake -S . -B build/debug -G Ninja \
+  -DCMAKE_TOOLCHAIN_FILE=cmake/AvrGcc.cmake \
+  -DCMAKE_BUILD_TYPE=Debug
+
+cmake --build build/debug
+```
+
 The extensionless `firmware` file is the ELF image containing debug symbols.
 
 ## VS Code / simavr

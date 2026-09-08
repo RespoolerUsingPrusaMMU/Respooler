@@ -12,6 +12,7 @@ public:
 
     bool initialize();
     void poll(MmuBoard &board);
+    void executeCommand(MmuBoard &board, const std::string &line);
     const std::string &path() const { return fifoPath_; }
 
 private:

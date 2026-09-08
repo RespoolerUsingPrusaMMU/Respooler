@@ -13,6 +13,7 @@ void usage(const char *name) {
               << "  --gdb-port <port>    GDB server port (default 1234)\n"
               << "  --frequency <hz>     MCU frequency (default 16000000)\n"
               << "  --control <path>     Command FIFO (default /tmp/prusa-mmu-sim.cmd)\n"
+              << "  --wait-for-gdb       Start AVR stopped until GDB continues it\n"
               << "  --help               Show this message\n";
 }
 }
@@ -31,6 +32,7 @@ int main(int argc, char **argv) {
     int gdbPort = 1234;
     std::string controlPath = "/tmp/prusa-mmu-sim.cmd";
     std::string firmwarePath;
+    bool waitForGdb = false;
 
     for (int i = 1; i < argc; ++i) {
         const std::string arg(argv[i]);
@@ -43,6 +45,8 @@ int main(int argc, char **argv) {
             frequency = static_cast<std::uint32_t>(std::strtoul(argv[++i], nullptr, 0));
         } else if (arg == "--control" && i + 1 < argc) {
             controlPath = argv[++i];
+        } else if (arg == "--wait-for-gdb") {
+            waitForGdb = true;
         } else if (!arg.empty() && arg[0] != '-') {
             firmwarePath = arg;
         } else {
@@ -57,7 +61,7 @@ int main(int argc, char **argv) {
     }
 
     MmuBoard board;
-    if (!board.loadFirmware(firmwarePath) || !board.initialize(frequency, gdbPort))
+    if (!board.loadFirmware(firmwarePath) || !board.initialize(frequency, gdbPort, waitForGdb))
         return 2;
 
     ControlInterface control(controlPath);

@@ -1,0 +1,96 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Firmware: Configure Debug",
+      "type": "shell",
+      "command": "cmake",
+      "args": [
+        "-S",
+        ".",
+        "-B",
+        "build/debug",
+        "-G",
+        "Ninja",
+        "-DCMAKE_TOOLCHAIN_FILE=cmake/AvrGcc.cmake",
+        "-DCMAKE_BUILD_TYPE=Debug"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/Spooler-Firmware"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Firmware: Build Debug",
+      "type": "shell",
+      "command": "cmake",
+      "args": [
+        "--build",
+        "build/debug"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/Spooler-Firmware"
+      },
+      "dependsOn": "Firmware: Configure Debug",
+      "problemMatcher": []
+    },
+    {
+      "label": "Simulator: Configure Qt Debug",
+      "type": "shell",
+      "command": "cmake",
+      "args": [
+        "-S",
+        ".",
+        "-B",
+        "build/debug",
+        "-G",
+        "Ninja",
+        "-DCMAKE_BUILD_TYPE=Debug",
+        "-DCMAKE_PREFIX_PATH=/opt/local/libexec/qt6"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/Prusa-MMU-Simulator"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Simulator: Build Qt Debug",
+      "type": "shell",
+      "command": "cmake",
+      "args": [
+        "--build",
+        "build/debug",
+        "--target",
+        "prusa_mmu_sim_gui"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/Prusa-MMU-Simulator"
+      },
+      "dependsOn": "Simulator: Configure Qt Debug",
+      "problemMatcher": []
+    },
+    {
+      "label": "Debug: Build Firmware and Simulator",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "Firmware: Build Debug",
+        "Simulator: Build Qt Debug"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Simulator: Start Qt for GDB",
+      "type": "process",
+      "command": "/bin/zsh",
+      "args": [
+        "-c",
+        "\"${workspaceFolder}/Prusa-MMU-Simulator/build/debug/prusa_mmu_sim_gui\" --gdb-port 1234 --wait-for-gdb \"${workspaceFolder}/Spooler-Firmware/build/debug/firmware\" > /tmp/prusa-mmu-sim-vscode.log 2>&1 & while ! nc -z 127.0.0.1 1234; do sleep 0.1; done; echo \"Simulator GDB server ready on port 1234\""
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/Prusa-MMU-Simulator"
+      },
+      "dependsOn": "Debug: Build Firmware and Simulator",
+      "problemMatcher": []
+    }
+  ]
+}

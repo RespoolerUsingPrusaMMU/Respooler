@@ -1,5 +1,16 @@
 # Prusa MMU Spooler Development Environment
 
+![Prusa MMU Rewinder](images/Rewinder4.png)
+
+## Introduction
+This software project supports the development and operation of a 3D-printable filament rewinder. A filament rewinder is used to transfer the remaining filament from a partially used spool onto another spool. While the basic concept is simple, the filament must be wound in a controlled and even manner so that each layer lays flat across the pickup spool rather than bunching, crossing, or building up unevenly.
+
+The project was conceived to solve a specific problem faced by Prusa printer owners who have an existing MMU2 or MMU3 and are upgrading to the newer INDX system. After the upgrade, the MMU assembly may no longer be needed for its original purpose, but it still contains a capable controller, stepper motors, drivers, sensors, and other useful hardware. Rather than discard or store these components, this project repurposes them as the foundation of a computer-controlled filament rewinder.
+
+The rewinder is designed to make maximum use of the existing Prusa MMU2/MMU3 hardware. The motors, controller electronics, sensors, and related components are reused, while the mechanical structure is provided by a purpose-built 3D-printable design. No additional drive motors or separate motion-control electronics are required.
+
+The resulting system provides an automated way to recover and reorganize leftover filament while giving otherwise unused MMU hardware a useful second life. The software in this repository controls the rewinding process, coordinates the spool and filament-guiding mechanisms, manages sensors and operator controls, and supports development and testing of the rewinder hardware.
+
 This directory contains the complete development environment for the Prusa MMU-based filament spool rewinder project.
 
 The project is divided into three separate directories:
@@ -17,7 +28,7 @@ Each directory has a different purpose and is built independently.
 
 ### `Spooler-Firmware`
 
-This directory contains the actual firmware that runs on the ATmega32U4 processor on the Prusa MMU controller board.
+This directory contains the actual firmware that runs on the ATmega32U4 processor on the Prusa MMU controller board. 
 
 The firmware implements the filament rewinder application, including:
 
@@ -129,6 +140,11 @@ The simulator models such functions as:
 - Automatic filament runout
 - TMC2130 fault conditions
 - UART debug output
+
+To run the gui based simulator without using VSCode:
+```text
+./build/Prusa-MMU-Simulator/debug/prusa_mmu_sim_gui build/Spooler-Firmware/debug/firmware
+```
 
 The simulator also provides a command interface using:
 

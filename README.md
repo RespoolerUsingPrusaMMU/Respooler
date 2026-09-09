@@ -141,6 +141,22 @@ The simulator models such functions as:
 - TMC2130 fault conditions
 - UART debug output
 
+####Prusa MMU Simulator GUI
+
+The Prusa MMU Simulator GUI provides a visual environment for running and testing the rewinder firmware without requiring the physical MMU2/MMU3 hardware. It works with the simavr AVR emulator to execute the same ATmega32U4 firmware used by the real rewinder while presenting the major motors, sensors, controls, and operating status in a single graphical interface.
+
+![Prusa MMU Rewinder](images/Prusa_Simulator_GUI.png)
+
+The upper portion of the window provides a simplified representation of the rewinder hardware. It shows the shuttle position, the state of the five MMU LEDs, and the operating state of the three stepper-motor functions: the shuttle, take-up spool, and brake. As the firmware runs, these indicators are updated from the simulated hardware so that movement and motor activity can be observed directly.
+
+The control section allows the user to interact with the firmware in much the same way as the physical MMU. The Left, Center, and Right buttons simulate the MMU front-panel controls, while additional controls allow filament presence to be changed, a long center-button press to be generated for re-homing, and simulator status to be displayed. This makes it possible to exercise normal rewinder operations such as homing, starting and stopping winding, changing operating modes, and responding to filament runout.
+
+The simulator also includes a set of fault-injection controls intended for development and verification. These controls can switch between automatic and manual mechanics, force a shuttle stall, remove or restore a simulated TMC2130 driver, inject an invalid driver ID, and simulate conditions such as over-temperature and undervoltage. These capabilities make it possible to test firmware error handling and recovery paths that would otherwise be difficult or inconvenient to reproduce with the physical hardware.
+
+Runtime information is displayed beneath the graphical MMU, including the AVR cycle count, simulated motor step counts, shuttle position, FINDA state, mechanics mode, GDB connection information, and the command FIFO used for scripted control. A log window at the bottom of the interface provides additional simulator messages and diagnostic information.
+
+The simulator can be used in two primary modes. For normal functional testing, the firmware can be started immediately and controlled entirely through the GUI. For firmware development, the simulator can be started in GDB mode, allowing Visual Studio Code and avr-gdb to connect to the simulated ATmega32U4 so that breakpoints, single stepping, variable inspection, and other source-level debugging operations can be performed while the GUI continues to represent the simulated rewinder hardware.
+
 To run the gui based simulator without using VSCode:
 ```text
 ./build/Prusa-MMU-Simulator/debug/prusa_mmu_sim_gui build/Spooler-Firmware/debug/firmware

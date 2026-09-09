@@ -141,7 +141,7 @@ The simulator models such functions as:
 - TMC2130 fault conditions
 - UART debug output
 
-####Prusa MMU Simulator GUI
+###Prusa MMU Simulator GUI
 
 The Prusa MMU Simulator GUI provides a visual environment for running and testing the rewinder firmware without requiring the physical MMU2/MMU3 hardware. It works with the simavr AVR emulator to execute the same ATmega32U4 firmware used by the real rewinder while presenting the major motors, sensors, controls, and operating status in a single graphical interface.
 

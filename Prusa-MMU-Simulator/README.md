@@ -276,3 +276,37 @@ firmware executes:
 The provided VS Code task uses `--wait-for-gdb` automatically. This fixes the
 case where the GUI appeared initialized but button taps did nothing because the
 AVR cycle counter was not advancing while the CPU was intentionally stopped.
+
+---------------------------------------
+NOTES:
+MMU3 Connectors
+The 8 pin connector that plugs into the Add On board for the MMU3 has the following assignments:
+PD-board cable
+
+Black  GND
+Black  GND
+Red    +24 V
+Red    +24 V
+Brown  RESET
+Black  GND
+White  UART / data
+Blue   UART / data
+
+
+5-position signal connector
+
+Triangle
+  |
+  v
+             UART    UART       GND      RESET
+[ EMPTY ] [ BLUE ] [ WHITE ] [ BLACK ] [ BROWN ]
+    1         2        3         4         5
+
+--------------------------------------------------
+MMU2 Connector
+1	Blue	+5 V
+2	White	MMU RX
+3	Green	MMU TX
+4	—	Not connected
+5	Brown	RESET
+

@@ -25,9 +25,9 @@
  * Board owns the three TMC2130 driver objects and maps the original MMU motor
  * channels into rewinder terminology:
  *
- *   Original pulley motor   -> shuttle / traverse motor
- *   Original selector motor -> take-up spool motor
- *   Original idler motor    -> supply-spool brake motor
+ *   Original pulley motor   -> shuttle / traverse motor (3rd connector from the right of the controller board)
+ *   Original selector motor -> take-up spool motor      (2nd connector from the right of the controller board)
+ *   Original idler motor    -> supply-spool brake motor (1st connector from the right of the controller board)
  *
  * Board also owns the button, FINDA, LED, and motion-scheduler abstractions.
  * Application code therefore deals with the rewinder mechanism and does not

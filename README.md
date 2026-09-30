@@ -227,6 +227,18 @@ Prusa-MMU-Simulator/build/debug/prusa_mmu_sim
 
 is the native macOS program that performs the simulation.
 
+
+---
+### `flashing the firmware`
+
+Use the flash function of the prusa slider to flash the new firmware to the MMU
+
+Before you do that cd to the tools directory and run this command:
+  buildPrusaMmuFormware.sh
+
+This create a new file called firmware_prusa.hex. This is the file that you should
+flash. You will find this file in "build/Spooler-Firmware/debug/firmware-prusa.hex"
+
 ---
 
 ### `simavr`

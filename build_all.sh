@@ -12,6 +12,7 @@ set -euo pipefail
 #   1. simavr
 #   2. Prusa-MMU-Simulator
 #   3. Spooler-Firmware
+#   4. PrusaSlicer-compatible firmware-prusa.hex
 #
 # Usage:
 #
@@ -97,6 +98,7 @@ echo "Checking required development tools..."
 check_command git
 check_command cmake
 check_command make
+check_command avr-objcopy
 
 echo "Required basic tools found."
 
@@ -281,6 +283,45 @@ echo
 echo "Spooler-Firmware build completed."
 
 # ============================================================================
+# Prepare firmware for PrusaSlicer
+#
+# Incorporates tools/buildPrusaMmuFormware.sh. Generate the Intel HEX from
+# the firmware built above, excluding EEPROM, then prepend the MMU marker.
+# Always use the plain HEX as input so repeated builds cannot duplicate it.
+# ============================================================================
+
+print_header "Preparing PrusaSlicer Firmware"
+
+FIRMWARE_ELF="${SPOOLER_BUILD}/firmware"
+FIRMWARE_HEX="${SPOOLER_BUILD}/firmware.hex"
+PRUSA_HEX="${SPOOLER_BUILD}/firmware-prusa.hex"
+
+if [[ ! -s "${FIRMWARE_ELF}" ]]; then
+    echo "ERROR: Built firmware is missing or empty: ${FIRMWARE_ELF}"
+    exit 1
+fi
+
+avr-objcopy -O ihex -R .eeprom "${FIRMWARE_ELF}" "${FIRMWARE_HEX}"
+
+if [[ ! -s "${FIRMWARE_HEX}" ]]; then
+    echo "ERROR: Generated HEX file is missing or empty: ${FIRMWARE_HEX}"
+    exit 1
+fi
+
+# Write beside the destination and rename only after the whole file is ready.
+# printf emits an ordinary LF newline after the Prusa MMU identification line.
+PRUSA_HEX_TEMP="$(mktemp "${PRUSA_HEX}.XXXXXX")"
+trap 'rm -f -- "${PRUSA_HEX_TEMP}"' EXIT
+
+{
+    printf '; device = mm-control\n'
+    cat "${FIRMWARE_HEX}"
+} > "${PRUSA_HEX_TEMP}"
+
+mv -f -- "${PRUSA_HEX_TEMP}" "${PRUSA_HEX}"
+trap - EXIT
+
+# ============================================================================
 # Finished
 # ============================================================================
 
@@ -298,3 +339,9 @@ echo "  ${MMU_SIM_BUILD}"
 echo "  ${SPOOLER_BUILD}"
 echo
 
+echo "Select this file in PrusaSlicer to flash the MMU controller:"
+echo
+echo "  ${PRUSA_HEX}"
+echo
+echo "No separate tools/buildPrusaMmuFormware.sh invocation is needed."
+echo

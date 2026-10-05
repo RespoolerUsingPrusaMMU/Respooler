@@ -13,7 +13,7 @@
 #include <stdint.h>
 
 #include "avr/eeprom.h"
-#include "hardware/Debug.hh"
+#include "hardware/DebugUsb.hh"
 
 //--------------------------------------------------------------------
 // The production class intentionally keeps state-machine implementation
@@ -44,7 +44,8 @@ protected:
   void SetUp() override
   {
     fake_avr::resetEeprom();
-    spooler::hardware::Debug::clear();
+    spooler::hardware::DebugUsb::clear();
+    spooler::hardware::DebugUsb::setConnected(true);
     mBoard.finda().setFilamentPresent(true);
   }
 
@@ -714,15 +715,36 @@ TEST_F(RewinderTest, DebugStatusContainsCurrentStateErrorSpeedAndFilament)
   mRewinder.enterState(RewinderState::Error);
   mRewinder.printDebugStatus();
 
-  spooler::hardware::Debug::clear();
+  spooler::hardware::DebugUsb::clear();
   mRewinder.enterState(RewinderState::Paused);
   mBoard.finda().setFilamentPresent(true);
   mRewinder.printDebugStatus();
 
-  const std::string &tText = spooler::hardware::Debug::text();
+  const std::string &tText = spooler::hardware::DebugUsb::text();
   EXPECT_NE(std::string::npos, tText.find("State=Paused"));
   EXPECT_NE(std::string::npos, tText.find("Error=None"));
   EXPECT_NE(std::string::npos, tText.find("Filament=Present"));
+}
+
+TEST_F(RewinderTest, UsbReconnectPrintsCurrentStateWithoutAStateChange)
+{
+  using spooler::hardware::DebugUsb;
+
+  mRewinder.enterState(RewinderState::Paused);
+  mRewinder.printDebugStatus();
+  DebugUsb::clear();
+
+  DebugUsb::setConnected(false);
+  mRewinder.printDebugStatus();
+  EXPECT_TRUE(DebugUsb::text().empty());
+
+  DebugUsb::setConnected(true);
+  mRewinder.printDebugStatus();
+  EXPECT_NE(std::string::npos, DebugUsb::text().find("State=Paused"));
+
+  DebugUsb::clear();
+  mRewinder.printDebugStatus();
+  EXPECT_TRUE(DebugUsb::text().empty());
 }
 
 } // namespace

@@ -121,7 +121,7 @@ bool Board::init()
 
   // Initialize the shuttle, take up, and brake motor drivers with their respective parameters.
   const bool tShuttleOk = mShuttleDriver.init(mShuttleParams, Tmc2130Currents(13U, 2U));
-  const bool tTakeupOk  = mTakeupDriver.init(mTakeupParams,   Tmc2130Currents(20U, 4U));
+  const bool tTakeupOk  = mTakeupDriver.init(mTakeupParams,   Tmc2130Currents(31U, 4U));
   const bool tBrakeOk   = mBrakeDriver.init(mBrakeParams,     Tmc2130Currents(config::BRAKE_RUN_CURRENT,config::BRAKE_HOLD_CURRENT));
 
   // Enable the shuttle motor and disable the take up and brake motors initially.

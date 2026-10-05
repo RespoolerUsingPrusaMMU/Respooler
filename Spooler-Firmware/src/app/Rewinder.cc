@@ -30,7 +30,7 @@
 #include "config/Defaults.hh"
 
 #ifdef SPOOLER_DEBUG
-#include "hardware/Debug.hh"
+#include "hardware/DebugUsb.hh"
 #endif
 
 //--------------------------------------------------------------------
@@ -116,7 +116,7 @@ void Rewinder::enterState(RewinderState aState)
 void Rewinder::startHoming()
 {
 #ifdef SPOOLER_DEBUG
-  spooler::hardware::Debug::printLine("State -> Homing");
+  spooler::hardware::DebugUsb::printLine("State -> Homing");
 #endif
 
   // Homing always begins from a completely stopped winding state.  This
@@ -518,7 +518,7 @@ void Rewinder::startWinding()
 {
   mBoard.takeup().setEnabled(true);
   mBoard.shuttle().setEnabled(true);
-  setBrake(true);
+  setBrake(false);                    // Set to false because it coused the winder motor to stall
   applyWindingRates();
   enterState(RewinderState::Winding);
 }
@@ -853,7 +853,7 @@ void Rewinder::update()
   if(tRehomeRequested)
   {
 #ifdef SPOOLER_DEBUG
-    hardware::Debug::printLine("Center button held 5 seconds -> rehoming shuttle.");
+    hardware::DebugUsb::printLine("Center button held 5 seconds -> rehoming shuttle.");
 #endif
     startHoming();
   }
@@ -944,6 +944,16 @@ void Rewinder::printDebugStatus()
   static uint8_t tLastSpeedLevel = 0U;
   static bool tLastFilamentPresent = false;
 
+  //--------------------------------------------------------------------
+  // Reprint the current state when a terminal connects, even when no
+  // monitored value changed while USB was disconnected.
+  //--------------------------------------------------------------------
+  if(!hardware::DebugUsb::isConnected())
+  {
+    tFirstCall = true;
+    return;
+  }
+
   const bool tFilamentPresent =
     mBoard.finda().filamentPresent();
 
@@ -969,83 +979,83 @@ void Rewinder::printDebugStatus()
   //--------------------------------------------------------------------
   // Print the application state.
   //--------------------------------------------------------------------
-  hardware::Debug::print("State=");
+  hardware::DebugUsb::print("State=");
 
   switch(mState)
   {
     case RewinderState::Boot:
-      hardware::Debug::print("Boot");
+      hardware::DebugUsb::print("Boot");
       break;
 
     case RewinderState::Homing:
-      hardware::Debug::print("Homing");
+      hardware::DebugUsb::print("Homing");
       break;
 
     case RewinderState::HomeBackoff:
-      hardware::Debug::print("HomeBackoff");
+      hardware::DebugUsb::print("HomeBackoff");
       break;
 
     case RewinderState::Ready:
-      hardware::Debug::print("Ready");
+      hardware::DebugUsb::print("Ready");
       break;
 
     case RewinderState::AdjustOuterLimit:
-      hardware::Debug::print("AdjustOuterLimit");
+      hardware::DebugUsb::print("AdjustOuterLimit");
       break;
 
     case RewinderState::Winding:
-      hardware::Debug::print("Winding");
+      hardware::DebugUsb::print("Winding");
       break;
 
     case RewinderState::Paused:
-      hardware::Debug::print("Paused");
+      hardware::DebugUsb::print("Paused");
       break;
 
     case RewinderState::OutOfFilament:
-      hardware::Debug::print("OutOfFilament");
+      hardware::DebugUsb::print("OutOfFilament");
       break;
 
     case RewinderState::Error:
-      hardware::Debug::print("Error");
+      hardware::DebugUsb::print("Error");
       break;
   }
 
   //--------------------------------------------------------------------
   // Print the active error code.
   //--------------------------------------------------------------------
-  hardware::Debug::print(" Error=");
+  hardware::DebugUsb::print(" Error=");
 
   switch(mError)
   {
     case ErrorCode::None:
-      hardware::Debug::print("None");
+      hardware::DebugUsb::print("None");
       break;
 
     case ErrorCode::ShuttleHomeTimeout:
-      hardware::Debug::print("ShuttleHomeTimeout");
+      hardware::DebugUsb::print("ShuttleHomeTimeout");
       break;
 
     case ErrorCode::ShuttleUnexpectedStall:
-      hardware::Debug::print("ShuttleUnexpectedStall");
+      hardware::DebugUsb::print("ShuttleUnexpectedStall");
       break;
 
     case ErrorCode::DriverInitialization:
-      hardware::Debug::print("DriverInitialization");
+      hardware::DebugUsb::print("DriverInitialization");
       break;
   }
 
   //--------------------------------------------------------------------
   // Print the operator-selected winding speed.
   //--------------------------------------------------------------------
-  hardware::Debug::print(" Speed=");
-  hardware::Debug::print(
+  hardware::DebugUsb::print(" Speed=");
+  hardware::DebugUsb::print(
     static_cast<uint32_t>(mSpeedLevel));
 
   //--------------------------------------------------------------------
   // Print the current FINDA status.
   //--------------------------------------------------------------------
-  hardware::Debug::print(" Filament=");
-  hardware::Debug::printLine(
+  hardware::DebugUsb::print(" Filament=");
+  hardware::DebugUsb::printLine(
     tFilamentPresent ? "Present" : "Absent");
 }
 

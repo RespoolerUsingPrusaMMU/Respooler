@@ -45,8 +45,11 @@ namespace hardware
 //--------------------------------------------------------------------
 namespace
 {
+// Allow StallGuard output at the configured 8 mm/s homing speed.
+// This is a velocity threshold, not the StallGuard sensitivity.
+constexpr uint32_t TCOOL_THRESHOLD = 1000UL;
+
 constexpr uint8_t  TOFF_DEFAULT    =   3U;
-constexpr uint32_t TCOOL_THRESHOLD = 450UL;
 constexpr uint32_t PWM_AMPLITUDE   = 240UL;
 constexpr uint32_t PWM_GRADIENT    =   4UL;
 constexpr uint32_t PWM_FREQUENCY   =   0UL;

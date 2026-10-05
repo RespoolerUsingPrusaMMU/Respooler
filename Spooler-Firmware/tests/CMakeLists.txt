@@ -8,6 +8,7 @@ set(CMAKE_CXX_EXTENSIONS ON)
 
 find_package(GTest REQUIRED)
 include(GoogleTest)
+enable_testing()
 
 add_executable(
   spooler_rewinder_tests
@@ -16,7 +17,7 @@ add_executable(
 )
 
 # IMPORTANT: fake headers must precede ../inc.  Rewinder.cc is therefore the
-# real production state-machine implementation, while Board/EEPROM/Debug are
+# real production state-machine implementation, while Board/EEPROM/DebugUsb are
 # deterministic host-side test doubles.
 target_include_directories(
   spooler_rewinder_tests

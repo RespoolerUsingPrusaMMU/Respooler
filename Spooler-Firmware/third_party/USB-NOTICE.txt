@@ -1,0 +1,14 @@
+USB support is based on the LUFA stack and descriptor implementation bundled
+with https://github.com/prusa3d/Prusa-Firmware-MMU
+Revision: 48d4d920be0b5337aa6251489f5073bb5f878f1b
+
+third_party/lufa/LUFA is supplied with its original source notices and licenses.
+See third_party/lufa/LUFA/License.txt and individual files.
+usb/Descriptors.c and usb/Descriptors.h retain their Dean Camera notices.
+The descriptors have been adapted for this debug application (product string,
+configurable VID/PID, no serial number, and bus-powered attributes).
+PRUSA-LICENSE.md preserves the upstream repository license information.
+The PLL settings were checked against src/modules/usb_cdc.cpp in that revision.
+
+The USB identity 2c99:0004 is retained for use on an existing PRUSA MMU board.
+This does not assign these identifiers to a new commercial USB product.

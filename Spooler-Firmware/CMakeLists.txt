@@ -15,7 +15,6 @@ add_executable(spooler_firmware
     src/app/Rewinder.cc
     src/hardware/Board.cc
     src/hardware/Buttons.cc
-    src/hardware/Debug.cc
     src/hardware/Finda.cc
     src/hardware/Leds.cc
     src/hardware/Tmc2130.cc
@@ -23,6 +22,13 @@ add_executable(spooler_firmware
     src/motion/StepperAxis.cc
     src/motion/MotionController.cc
 
+)
+
+# USB debug support is linked only for the existing Debug configuration.
+# The original UART Debug.cc/.hh remain available beside DebugUsb.
+include(cmake/UsbDebug.cmake)
+target_link_libraries(spooler_firmware PRIVATE
+    $<$<CONFIG:Debug>:spooler_usb_debug>
 )
 
 target_include_directories(spooler_firmware PRIVATE

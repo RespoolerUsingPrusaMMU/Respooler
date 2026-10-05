@@ -85,11 +85,11 @@ constexpr uint8_t SHUTTLE_STALL_SAMPLES_REQUIRED = 4U;
 // configurable mechanical safety bound and initially matches the existing
 // spool-width assumption.
 //--------------------------------------------------------------------
-constexpr float OUTER_LIMIT_JOG_MM                  =  0.50F;
-constexpr float OUTER_LIMIT_ADJUST_SPEED_MM_PER_SEC =  8.0F;
-constexpr float MINIMUM_SPOOL_WINDING_WIDTH_MM      = 10.0F;
-constexpr float MAXIMUM_SPOOL_WINDING_WIDTH_MM      = 60.0F;
-constexpr uint16_t OUTER_LIMIT_TIMEOUT_MS           = 60000U;
+constexpr float OUTER_LIMIT_JOG_MM                  =   0.50F;
+constexpr float OUTER_LIMIT_ADJUST_SPEED_MM_PER_SEC =   8.0F;
+constexpr float MINIMUM_SPOOL_WINDING_WIDTH_MM      =  10.0F;
+constexpr float MAXIMUM_SPOOL_WINDING_WIDTH_MM      = 200.0F;
+constexpr uint16_t OUTER_LIMIT_TIMEOUT_MS           = 65000U;
 
 //--------------------------------------------------------------------
 // EEPROM values are written only when the operator leaves adjustment mode, not
@@ -106,11 +106,12 @@ constexpr uint16_t OUTER_LIMIT_EEPROM_MAGIC = 0xA55AU;
 constexpr bool SHUTTLE_DRIVER_DIR_ON             = false;
 constexpr bool TAKEUP_DRIVER_DIR_ON              = true;
 constexpr bool BRAKE_DRIVER_DIR_ON               = true;
-constexpr bool TAKEUP_WINDING_DIRECTION_POSITIVE = true;
+constexpr bool TAKEUP_WINDING_DIRECTION_POSITIVE = false;
 
 //--------------------------------------------------------------------
 // Operator-selected winding speeds.
 // SPEED_LEVEL_COUNT must match the number of elements in TAKEUP_RPM.
+// Its not a good idea to exceed 750.0F
 //--------------------------------------------------------------------
 constexpr uint8_t SPEED_LEVEL_COUNT   = 5U;
 constexpr uint8_t DEFAULT_SPEED_LEVEL = 2U;
@@ -119,8 +120,8 @@ constexpr float TAKEUP_RPM[SPEED_LEVEL_COUNT] =
   8.0F,
   12.0F,
   18.0F,
-  25.0F,
-  35.0F
+  35.0F,
+  50.0F
 };
 
 //--------------------------------------------------------------------
@@ -129,8 +130,8 @@ constexpr float TAKEUP_RPM[SPEED_LEVEL_COUNT] =
 // current as drag torque.  Begin conservatively and verify motor/driver heating
 // and filament tension on the physical rewinder.
 //--------------------------------------------------------------------
-constexpr uint8_t BRAKE_RUN_CURRENT  = 6U;
-constexpr uint8_t BRAKE_HOLD_CURRENT = 6U;
+constexpr uint8_t BRAKE_RUN_CURRENT  = 1U;
+constexpr uint8_t BRAKE_HOLD_CURRENT = 1U;
 
 //--------------------------------------------------------------------
 // Buttons and FINDA input filtering.
@@ -147,7 +148,7 @@ constexpr uint16_t FINDA_DEBOUNCE_MS  = 80U;
 // continuously for this interval cancels the short-press action and starts a
 // full StallGuard shuttle re-home cycle.
 //--------------------------------------------------------------------
-constexpr uint16_t CENTER_BUTTON_REHOME_HOLD_MS = 5000U;
+constexpr uint16_t CENTER_BUTTON_REHOME_HOLD_MS = 1000U;
 
 constexpr uint16_t RIGHT_BUTTON_MAX   =  50U;
 constexpr uint16_t MIDDLE_BUTTON_MIN  =  80U;
@@ -160,7 +161,7 @@ constexpr uint16_t LEFT_BUTTON_MAX    = 180U;
 // near the sensor and therefore NO filament.  Change this constant if the final
 // wiring or sensor polarity is different.
 //--------------------------------------------------------------------
-constexpr bool FINDA_HIGH_MEANS_NO_FILAMENT = true;
+constexpr bool FINDA_HIGH_MEANS_NO_FILAMENT = false;
 
 //--------------------------------------------------------------------
 // Scheduler and display timing.

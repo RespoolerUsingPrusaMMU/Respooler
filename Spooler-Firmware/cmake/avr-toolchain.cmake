@@ -14,11 +14,15 @@ find_program(AVR_GXX avr-g++ REQUIRED)
 find_program(AVR_AR avr-ar REQUIRED)
 find_program(AVR_OBJCOPY avr-objcopy REQUIRED)
 find_program(AVR_SIZE avr-size REQUIRED)
+find_program(AVR_OBJDUMP avr-objdump REQUIRED)
 
 set(CMAKE_C_COMPILER   "${AVR_GCC}")
 set(CMAKE_CXX_COMPILER "${AVR_GXX}")
 set(CMAKE_ASM_COMPILER "${AVR_GCC}")
 set(CMAKE_AR           "${AVR_AR}")
+set(CMAKE_OBJCOPY      "${AVR_OBJCOPY}")
+set(CMAKE_OBJDUMP      "${AVR_OBJDUMP}")
+set(CMAKE_SIZE_UTIL    "${AVR_SIZE}")
 
 # The resulting firmware cannot be executed on the build machine.
 # Tell CMake's compiler tests to build static libraries instead of trying

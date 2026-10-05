@@ -18,7 +18,7 @@
 
 SHELL 			:= ${shell which bash}
 SIMAVR_VERSION	:= ${shell \
-	git describe --abbrev=0 --tags || \
+	git describe --abbrev=0 --tags 2>/dev/null || \
 	echo "unknown" }
 SIMAVR_REVISION	= 2
 

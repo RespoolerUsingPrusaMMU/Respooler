@@ -57,11 +57,12 @@ constexpr float SHUTTLE_EDGE_MARGIN_MM =  1.50F;  ///< Keep filament off flange 
 
 //--------------------------------------------------------------------
 // Shuttle mechanics.
-// The starting value assumes a 200-step motor, 8x microstepping, and the
-// existing MMU drive geometry.  Measure the actual shuttle travel and update
-// this value before relying on calculated edge positions.
+// Calibrated using 40 button presses at 42 microsteps per press.
+// Total commanded movement: 1680 microsteps.
+// Measured shuttle travel: 8.52 mm.
+// 40 presses × 42 microsteps = 1,680 microsteps/8.52 = 197.1831
 //--------------------------------------------------------------------
-constexpr float SHUTTLE_STEPS_PER_MM = (200.0F * 8.0F / 19.147274F);
+constexpr float SHUTTLE_STEPS_PER_MM = 204.9721F;
 constexpr float TAKEUP_MOTOR_STEPS_PER_REVOLUTION = 200.0F * 8.0F;
 
 //--------------------------------------------------------------------
